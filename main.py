@@ -46,7 +46,7 @@ def fetch_ones_text(name):
     resp = requests.get(url)
     text = resp.text
     html = etree.HTML(text)
-    if html.xpath("//title/text()")[0] != f"{name} - PRTS - 玩家自由构筑的明日方舟中文Wiki":
+    if html.xpath("//title/text()")[0] != f"{name} - PRTS - 玩家共同构筑的明日方舟中文Wiki":
         print(f"{url} is not accessible!")
         assert False
     return text
@@ -57,7 +57,7 @@ def fetch_ones_text(name):
 
 def get_operator_list():
     '''获取干员列表'''
-    
+
     Lancet_2 = fetch_ones_text("Lancet-2")
     html = etree.HTML(Lancet_2)
     operators = html.xpath("//table/tbody/tr/td/div/ul/li/span/span/a/text()")
@@ -71,7 +71,7 @@ def get_file(text):
         text = text[:ans.start()] + ans.group(1) + text[ans.end():]
     while re.search(ptn_sup, text):
         text = re.sub(ptn_sup, '', text)
-    
+
     html = etree.HTML(text)
     titles = filtering(html.xpath("//table[@class='wikitable mw-collapsible mw-collapsed logo']"
                                   "/tbody/tr/th[@style='text-align:left;color:white;background:#424242;']"
@@ -88,7 +88,7 @@ def get_file(text):
     for para in paras_e:
         dic[para] = text.find(decode(para), st)
         st = dic[para] + len(para) - len(title.split('_')[-1])
-    
+
     all_conts = titles_e + paras_e
     all_conts.sort(key=lambda x: dic[x])
     file = '\n\n'.join(map(decode, all_conts))
@@ -101,7 +101,7 @@ def get_voices(text):
     html = etree.HTML(text)
     voices = html.xpath("//div/div/div[@data-kind-name='中文']/text()")
     titles = html.xpath("//div/div/@data-title")
-    
+
     if len(voices) != len(titles):
         print("voices' amount is wrong!")
         assert False
@@ -118,25 +118,13 @@ def get_modules(text):
     modules = html.xpath("//h3/span[@class='mw-headline']/text()")
     if not modules:
         return
-    paras = filtering(html.xpath("//div/table/tbody/tr/td/div/text()"))
 
-    if len(modules) == 2:
-        return '\n\n'.join([modules[1] + "（第一模组）", *paras])
-
-    elif len(modules) == 3:
-        maxn = sep = -1
-        position = text.find(paras[0])
-        for i in range(1, len(paras)):
-            sub = text.find(paras[i], position + len(paras[i - 1])) - position - len(paras[i - 1])
-            position = text.find(paras[i], position + len(paras[i - 1]))
-            if sub > maxn:
-                maxn = sub
-                sep = i
-        return '\n\n'.join([modules[1] + "（第一模组）", *paras[:sep], modules[2] + "（第二模组）", *paras[sep:]])
-
-    else:
-        print("哪有干员有3个模组啊（恼）")
-        assert False
+    module_text = ""
+    for i in range(1, len(modules)):
+        paras = filtering(html.xpath(
+            f"//div/div/div/div/div/div/div/div[@id='mw-customcollapsible-module-{i+1}']/div/text()"))
+        module_text += '\n\n'.join([modules[i] + f"（第{'一二三四五六七八九'[i-1]}模组）", *paras]) + '\n\n'
+    return module_text.strip()
 
 
 # ===============终端函数===============
@@ -151,7 +139,7 @@ def get_one(name, type_):
     if "file" in type_:
         print(f"getting {name}'s file...", end=' ')
         file = get_file(text)
-        
+
         if not os.path.exists("干员档案"):
             os.mkdir("干员档案")
         with open(f"干员档案\\明日方舟干员档案（{name}）.txt", 'w', encoding='utf-8') as f:
@@ -161,7 +149,7 @@ def get_one(name, type_):
     if "voices" in type_:
         print(f"getting {name}'s voices...", end=' ')
         record = get_voices(text)
-        
+
         if not os.path.exists("干员语音"):
             os.mkdir("干员语音")
         with open(f"干员语音\\明日方舟干员语音（{name}）.txt", 'w', encoding='utf-8') as f:
@@ -173,7 +161,7 @@ def get_one(name, type_):
         modules = get_modules(text)
         if not os.path.exists("干员模组"):
             os.mkdir("干员模组")
-            
+
         if modules:
             with open(f"干员模组\\明日方舟干员模组（{name}）.txt", 'w', encoding='utf-8') as f:
                 f.write(modules)
@@ -193,7 +181,7 @@ def get_one_combined(name):
     record = get_voices(text)
     modules = get_modules(text)
     doc = f"一、干员档案\n\n{file}\n\n二、语音记录\n\n{record}三、模组文案\n\n{modules if modules else '该干员暂无模组'}"
-    
+
     if not os.path.exists("干员资料"):
         os.mkdir("干员资料")
     with open(f"干员资料\\明日方舟干员资料（{name}）.txt", 'w', encoding='utf-8') as f:
@@ -208,7 +196,7 @@ def get_all(type_):
     Lancet_2 = fetch_ones_text("Lancet-2")
     operators = get_operator_list(Lancet_2)
     print("done!")
-    
+
     for operator in operators:
         get_one(operator, type_)
 
@@ -219,13 +207,13 @@ def get_all_combined():
     print("getting operator list...", end=' ')
     operators = get_operator_list()
     print("done!")
-    
+
     for operator in operators:
         get_one_combined(operator)
 
 
 def main():
-    ans = input().strip()
+    ans = input("please input operators' name: ").strip()
     if ans.lower() == "all":
         get_all_combined()
     else:
